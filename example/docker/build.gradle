@@ -1,0 +1,322 @@
+
+apply plugin: "com.marklogic.ml-gradle"
+
+/* Gradle tasks to do the following docker functionality.
+//    See comments above each task.
+//  createDockerContainer
+//  deleteDockerContainer
+//  startDockerContainer
+//  stopDockerContainer
+//  createDockerImage
+//  getMarkLogic
+//  deployWithDocker
+*/
+
+// docker helper function to determine if an image
+//  exists.
+def isImage(imageName) {
+  def dockerArgs = ""
+
+  // verify we have a docker image name
+  if (imageName) {
+    dockerArgs += "docker image inspect ${imageName}"
+    Process process = dockerArgs.execute()
+    process.waitFor()
+    if (process.exitValue() == 0) {
+      return true
+    } else {
+      println "Std Err: ${process.err.text}"
+      println "Std Out: ${process.in.text}"
+      return false
+    }
+  } else {
+    println "isImage: imageName parameter is empty."
+    return false
+  }
+}
+
+/*
+  createDockerContainer - Create a Docker container from a previously
+                          created Docker image.
+    depends on the following properties -
+    ml-gradle properties:
+      mlAppServicesPort - Defined by ml-gradle. MarkLogic's Management port.
+      mlRestPort - Defined by ml-gradle. Application REST instance port.
+    docker project properties:
+      dockerMapDataDirVolPath - optional host directory to map the
+                                Docker container's MarkLogic data directory.
+      dockerContainerName - name to give the Docker container.
+      dockerImageName - name of the Docker image to create the container.
+      dockerContainerCreateSleepTime - optional sleep time to allow
+                                       MarkLogic to begin listening on
+                                       the admin port (default=8001).
+*/
+task createDockerContainer (type: com.marklogic.gradle.task.MarkLogicTask) {
+  doLast {
+
+    def dockerArgs = "docker run -d"
+
+    // get the host MarkLogic port range that will be exposed
+    //  to the host from the docker container.
+    def mlHostPortRange = "8000-8010"
+
+    // MarkLogic's App Services app server listens on port 8000.
+    //  In the docker container, use this value to expose to
+    //  the docker host running the container unless it is
+    //  overridden by the "mlAppServicesPort" property in the
+    //  main project's gradle.properties file. This represents
+    //  the lower bound of the exposed port range. If no value
+    //  is set, use the default value of port 8000.
+    def appServicesPort = "8000"
+    if (rootProject.hasProperty("mlAppServicesPort")) {
+      appServicesPort = rootProject.mlAppServicesPort;
+    }
+    def lowerBound = appServicesPort
+    def upperBound = ""
+    if (lowerBound) {
+      def lowerBoundInt = lowerBound.toInteger()
+
+      // default MarkLogic upper port usage is 8010.
+      //  so take the lower bound limit, add 10 to
+      //  get the upper bounds of the port range to expose
+      //  to the host running the docker container.
+      def upperBoundInt = lowerBoundInt + 10;
+      upperBound = upperBoundInt.toString()
+      mlHostPortRange = "${lowerBound}-${upperBound}"
+    }
+
+    // expose these ports outside of the container running MarkLogic
+    dockerArgs += " -p ${mlHostPortRange}:8000-8010"
+
+    // check for any custom MarkLogic application server ports to expose
+    if (rootProject.hasProperty("mlRestPort")) {
+      // expose these ports outside of the container running MarkLogic
+      dockerArgs += " -p ${rootProject.mlRestPort}:${rootProject.mlRestPort}"
+    }
+
+    // check to see if any external storage directory should be mapped
+    //  to MarkLogic's default data directory.
+    // external storage directories persist after the Docker container
+    //  has been deleted. this enables you to upgrade MarkLogic by simply
+    //  creating a new container and pointing it to the same Docker volume
+    //  directory.
+    //  NOTE: this is upgrades only, not downgrades.
+    if (project.hasProperty("dockerMapDataDirVolPath")) {
+      if (dockerMapDataDirVol) {
+        dockerArgs += " -v ${dockerMapDataDirVolPath}:/var/opt/MarkLogic"
+      }
+    }
+
+    // verify we have a container name and a docker image name
+    if (project.hasProperty("dockerContainerName")) {
+      dockerArgs += " --name=${dockerContainerName}"
+    } else {
+     throw new GradleException("Required property, \"dockerContainerName\" not found.")
+    }
+
+    if (project.hasProperty("dockerImageName")) {
+      dockerArgs += " ${dockerImageName}"
+    } else {
+     throw new GradleException("Required property, \"dockerImageName\" not found.")
+    }
+
+    println "Executing docker with the following arguments: ${dockerArgs}"
+
+    def process = dockerArgs.execute()
+    process.waitFor()
+    if (process.exitValue() != 0) {
+      println "Docker container create error."
+      println "  Std Err: ${process.err.text}"
+      println "  Std Out: ${process.in.text}"
+      throw new GradleException("Docker container, ${dockerContainerName}, not created.")
+    }
+
+    // if a sleep delay has been defined, sleep for the requested
+    //  number of seconds.
+    if (project.hasProperty("dockerContainerCreateSleepTime")) {
+      def sleepTime = dockerContainerCreateSleepTime.toInteger()
+      println "Docker Container created. Sleeping for ${sleepTime} seconds to let MarkLogic begin listening on the Management Port."
+      sleep(sleepTime * 1000)
+    }
+  }
+}
+
+// stop then remove the named docker container.
+/*
+  deleteDockerContainer
+    depends on the following properties -
+    docker project properties:
+      dockerContainerName - name to give the Docker container.
+*/
+task deleteDockerContainer (type: com.marklogic.gradle.task.MarkLogicTask) {
+  doLast {
+    def dockerArgs = ""
+    // verify we have a container name and a docker image name
+    if (project.hasProperty("dockerContainerName")) {
+      dockerArgs += "docker stop ${dockerContainerName}"
+      Process process = dockerArgs.execute()
+      process.waitFor()
+      if (process.exitValue() != 0) {
+        println "Docker container create error."
+        println "  Std Err: ${process.err.text}"
+        println "  Std Out: ${process.in.text}"
+        throw new GradleException("Docker container, ${dockerContainerName}, not stopped or not responding.")
+      } else {
+        dockerArgs = "docker rm -v ${dockerContainerName}"
+        process = dockerArgs.execute()
+        process.waitFor()
+        if (process.exitValue() != 0) {
+          println "Docker container create error."
+          println "  Std Err: ${process.err.text}"
+          println "  Std Out: ${process.in.text}"
+          throw new GradleException("Docker container, ${dockerContainerName}, not deleted.")
+        }
+      }
+    } else {
+     throw new GradleException("Required property, \"dockerContainerName\" not found.")
+    }
+  }
+}
+
+// start a named docker container. Does not create the container.
+/*
+  startDockerContainer
+    depends on the following properties -
+    docker project properties:
+      dockerContainerName - name to give the Docker container.
+*/
+task startDockerContainer (type: com.marklogic.gradle.task.MarkLogicTask) {
+  doLast {
+    def dockerArgs = ""
+    // verify we have a container name
+    if (project.hasProperty("dockerContainerName")) {
+      dockerArgs += "docker start ${dockerContainerName}"
+      Process process = dockerArgs.execute()
+      process.waitFor()
+      if (process.exitValue() != 0) {
+        println "Std Err: ${process.err.text}"
+        println "Std Out: ${process.in.text}"
+        return false
+      }
+    } else {
+     throw new GradleException("Required property, \"dockerContainerName\" not found.")
+    }
+  }
+}
+
+// stop a named docker container but do not delete the container.
+/*
+  stopDockerContainer
+    depends on the following properties -
+    docker project properties:
+      dockerContainerName - name to give the Docker container.
+*/
+task stopDockerContainer (type: com.marklogic.gradle.task.MarkLogicTask) {
+  doLast {
+    def dockerArgs = ""
+    // verify we have a container name and a docker image name
+    if (project.hasProperty("dockerContainerName")) {
+      dockerArgs += "docker stop ${dockerContainerName}"
+      Process process = dockerArgs.execute()
+      process.waitFor()
+      if (process.exitValue() != 0) {
+        println "Std Err: ${process.err.text}"
+        println "Std Out: ${process.in.text}"
+      }
+    } else {
+     throw new GradleException("Required property, \"dockerContainerName\" not found.")
+    }
+  }
+}
+
+// create a Docker image
+/*
+  createDockerImage
+    depends on the following properties -
+    docker project properties:
+      dockerImageName - name to give the Docker container.
+      dockerFilename - name and path to the Docker build file
+                (default: "DockerFile" in the current working directory)
+*/
+task createDockerImage (type: com.marklogic.gradle.task.MarkLogicTask) {
+  doLast {
+    // check to see if the image is already created
+    def dockerFile = ""
+
+    // set the docker build path and filename
+    if (project.hasProperty("dockerFilename")) {
+      // if there is a property with a build path and filename,
+      //  use that.
+      dockerFile = dockerFilename
+    } else {
+      // otherwise, default to the build file of "Dockerfile" in
+      //  the current working directory.
+      dockerFile = "Dockerfile"
+    }
+
+    // if we don't currently have an image with the
+    //  desired name, build one.
+    if (project.hasProperty("dockerImageName")) {
+      if (!isImage(dockerImageName)) {
+        // create the docker image
+        dockerArgs += "docker build -f ${dockerFile} -t ${dockerImageName} ."
+        Process process = dockerArgs.execute()
+        process.waitFor()
+        if (process.exitValue() != 0) {
+          println "Std Err: ${process.err.text}"
+          println "Std Out: ${process.in.text}"
+        }
+      }
+    }
+  }
+}
+
+// Download MarkLogic from the download URL. Must get the
+//  download url from developer.marklogic.com/products and
+//  use your MarkLogic developer account.
+/*
+  getMarkLogic
+    depends on the following properties -
+    docker project properties:
+      dockerMlDownloadUrl - download URL value.
+*/
+task getMarkLogic (type: com.marklogic.gradle.task.MarkLogicTask) {
+  doLast {
+    if (project.hasProperty("dockerMlDownloadUrl")) {
+      if (!dockerMlDownloadUrl) {
+        throw new GradleException("Required property, \"dockerMlDownloadUrl\" is empty.")
+      }
+
+      def pattern = "(MarkLogic(.*).rpm)"
+      def fileName = (dockerMlDownloadUrl =~ /$pattern/)[0][1]
+
+      def file = new File(fileName).newOutputStream()
+      file << new URL(dockerMlDownloadUrl).openStream()
+      file.close()
+    } else {
+      throw new GradleException("Required property, \"dockerMlDownloadUrl\", not found.")
+    }
+  }
+}
+
+/*
+  deployWithDocker - task to create a Docker container from
+    an image that has MarkLogic installed, initialize MarkLogic,
+    create the administrator account then run mlDeploy to deploy
+    a project.
+
+    Does the following:
+      calls createDockerContainer
+      calls mlInit
+      calls mlInstallAdmin
+      calls mlDeploy
+*/
+task deployWithDocker (type: com.marklogic.gradle.task.MarkLogicTask) {
+  dependsOn createDockerContainer
+  dependsOn mlInit
+  dependsOn mlInstallAdmin
+  dependsOn mlDeploy
+  mlInit.mustRunAfter createDockerContainer
+  mlInstallAdmin.mustRunAfter mlInit
+  mlDeploy.mustRunAfter mlInstallAdmin
+}
