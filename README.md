@@ -1,19 +1,20 @@
-# ML-GRADLE Hands-On Exercises 
-## Episode 3 - Customizing Deployments with ml-gradle
+# Docker Example Tasks for MarkLogic's ML-GRADLE plug-in
 
-This episode investigates extending configurations created in **Episode 2**. We will extend our configurations to include application code for our Star Wars web page project. The web page will also extract data from our Star Wars content database then display the data in Google Charts. We will also load content to our Star Wars database by using an **ml-gradle** MarkLogic Content Pump (MLCP) task.
+Utilize these Groovy tasks along with MarkLogic's ml-gradle Gradle plug-in to deploy MarkLogic configurations to Docker containers. The tasks encapsulate common Docker container tasks such as creating new Docker containers from existing images, removing containers, starting and stopping containers.
+
+An example setting.gradle and build.gradle file along with an example MarkLogic configuration project demonstrate using the Docker tasks. The build.gradle file utilizes Gradle task dependencies to create a Docker container from an existing image then call the "ml-gradle" mlDeploy task to create an example database and MarkLogic REST application server. 
 
 ## Requirements
 
-To successfully do the hands-on portions for this episode, make sure you have the following installed.
+To successfully use these Docker Groovy tasks, make sure you have the following installed and/or created.
 
 * Ensure you have a 64-bit Operating System. *Important: MarkLogic Server runs only on 64-bit operating systems.*
-* MarkLogic Server, Version 9.0-3 or greater installed and started. <http://developer.marklogic.com/products>
+* A Docker image created with MarkLogic Server, Version 9.0-5 or greater installed and started. <http://developer.marklogic.com/products>
 * Java, Version 1.8 or greater. <https://java.com/en/download/>
 * Gradle, Version 3.5 or greater. <https://gradle.org/install/>
-* An internet connection to pull dependencies from Gradle repositories.
+* An internet connection to pull dependencies, including the MarkLogic ml-gradle plug-in from Gradle repositories.
 
-## Episode 3 Hands-On Instructions
+## Using the Example Project
 
 This episode is divided into 2 different folders. These folder represent the final results of each part. We will be running Gradle tasks on the command prompt (Windows) or in Terminal (CentOS/RedHat or MacOS).
 
@@ -26,7 +27,7 @@ To follow along, do the following.
 2. The `episode3` folder should now have the following folders:  
 	* `part1-app-deploy`
 	* `part2-mlcp`
-	* `starwarsproject` <-- created when you copied the folder from the `part1-app-deploy` folder in **Step 1**.	
+	* `starwarsproject` <-- created when you copied the folder from the `part1-app-deploy` folder in **Step 1**.
 3. In command prompt (Windows) or terminal session prompt (CentOS/RedHat or MacOS), change to your new `starwarsproject` folder.
 	* Type `cd <path to the episode3 files >/episode3/starwarsproject` then press ENTER.
 
@@ -42,7 +43,7 @@ To follow along, do the following.
 6. In a web browser, go to <http://localhost:8090/index.xqy> to see the project web page. Edit the port number (:8090) if your value of `mlRestPort` in the `gradle.properties` file is different.
 	* No data will display in the charts since we have not yet loaded content to the content database.
 
-7. Do **not** run the `mlUndeploy	` task. We will load content in the next section then refresh our web page to display the data in our Google Charts. 
+7. Do **not** run the `mlUndeploy	` task. We will load content in the next section then refresh our web page to display the data in our Google Charts.
 
 ### `part2-mlcp` instructions
 
@@ -51,7 +52,7 @@ To follow along, do the following.
 2. The `episode3` folder should still have the following folders:  
 	* `part1-app-deploy`
 	* `part2-mlcp`
-	* `starwarsproject` <-- created when you copied the folder from the `part1-mlcp` folder in **Step 1**.	
+	* `starwarsproject` <-- created when you copied the folder from the `part1-mlcp` folder in **Step 1**.
 
 3. In command prompt (Windows) or terminal session prompt (CentOS/RedHat or MacOS), change to your new `starwarsproject` folder.
 	* Type `cd <path to the episode3 files >/episode3/starwarsproject` then press ENTER.

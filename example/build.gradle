@@ -21,11 +21,33 @@ task deployContent(type: com.marklogic.gradle.task.MlcpTask) {
   classpath = configurations.mlcp
   command = "IMPORT"
   database = "starwars-content"
-  input_file_path = "../../star-wars-content/{characters,images}"
+  input_file_path = "./star-wars-content/{characters,images}"
   output_uri_replace = ".*characters,'/character',.*images,'/image'"
   output_permissions = "rest-reader,read,rest-writer,update"
   output_collections = "starwars-collection"
 }
 
-//mlDeploy.dependsOn ":docker:createDockerContainer"
-//mlDeploy.mustRunAfter ":docker:createDockerContainer"
+/*
+  deployWithDocker - Example task to create a Docker container from
+    an image that has MarkLogic installed, initialize MarkLogic,
+    create the administrator account then run MarkLogic's mlDeploy
+    ml-gradle plugin task to deploy a project configuration.
+
+    Does the following:
+      calls createDockerContainer
+      calls mlInit
+      calls mlInstallAdmin
+      calls mlDeploy
+      calls deployContent
+*/
+task deployWithDocker (type: com.marklogic.gradle.task.MarkLogicTask) {
+  dependsOn ":mlgradle-docker:createDockerContainer"
+  dependsOn mlInit
+  dependsOn mlInstallAdmin
+  dependsOn mlDeploy
+  dependsOn deployContent
+  mlInit.mustRunAfter ":mlgradle-docker:createDockerContainer"
+  mlInstallAdmin.mustRunAfter mlInit
+  mlDeploy.mustRunAfter mlInstallAdmin
+  deployContent.mustRunAfter mlDeploy
+}

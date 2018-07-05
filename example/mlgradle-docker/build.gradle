@@ -298,25 +298,3 @@ task getMarkLogic (type: com.marklogic.gradle.task.MarkLogicTask) {
     }
   }
 }
-
-/*
-  deployWithDocker - task to create a Docker container from
-    an image that has MarkLogic installed, initialize MarkLogic,
-    create the administrator account then run mlDeploy to deploy
-    a project.
-
-    Does the following:
-      calls createDockerContainer
-      calls mlInit
-      calls mlInstallAdmin
-      calls mlDeploy
-*/
-task deployWithDocker (type: com.marklogic.gradle.task.MarkLogicTask) {
-  dependsOn createDockerContainer
-  dependsOn mlInit
-  dependsOn mlInstallAdmin
-  dependsOn mlDeploy
-  mlInit.mustRunAfter createDockerContainer
-  mlInstallAdmin.mustRunAfter mlInit
-  mlDeploy.mustRunAfter mlInstallAdmin
-}
