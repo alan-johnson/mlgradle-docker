@@ -284,18 +284,17 @@ task createDockerImage (type: com.marklogic.gradle.task.MarkLogicTask) {
   }
 
   doLast {
-    // check to see if the image is already created
-    def dockerFile = ""
+    // default the Docker build file to "Dockerfile"
+    def dockerFile = "Dockerfile"
+    def dockerArgs = ""
 
     // set the docker build path and filename
     if (project.hasProperty("dockerFilename")) {
       // if there is a property with a build path and filename,
       //  use that.
-      dockerFile = dockerFilename
-    } else {
-      // otherwise, default to the build file of "Dockerfile" in
-      //  the current working directory.
-      dockerFile = "Dockerfile"
+      if (dockerFilename) {
+        dockerFile = dockerFilename
+      }
     }
 
     // if we don't currently have an image with the

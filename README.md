@@ -93,35 +93,19 @@ The example demonstrates the following:
 * Create a Docker Container based upon an existing Docker image using Gradle and the added "mlgradle-docker" tasks.
 * Deploy a simple demo web application using Gradle and MarkLogic's ml-gradle plugin.
 
-To run the demonstration, follow the steps below.
-
-### Instructions For The`example` Project.  
-
-1. Download or clone the `mlgradle-docker` GitHub project.
-2. Create a Docker image and tag the image `ml:9`.
-	* Download the "**Red Hat Enterprise Linux / CentOS, Version 7**" version of the MarkLogic Server installer from <http://developer.marklogic.com/products>.
-	* Copy the downloaded MarkLogic .RPM installer file to the  `mlgradle-example` directory within the`example` directory of the downloaded `mlgradle-docker` project.
-	* Edit the `Dockerfile` located in the `mlgrade-example` directory within the `example` directory.
-	* In the `Dockerfile`, on Line 18, make sure the .RPM filename after the Docker `COPY` command is the same as the downloaded .RPM file from MarkLogic.
-	* Save any changes to the `Dockerfile`.
-	* Edit the `gradle.properties` file in the same directory as the `Dockerfile`.
-	* Set the `dockerImageName` property to the value of `ml:9`.
-		* Example: `dockerImageName=ml:9` 
-	* Open a Terminal shell or Windows Command Prompt.
-	* Change to the `mlgradle-docker/example/ml-gradle` directory.
-	* Type `gradle createDockerImage` then press ENTER.
-	* When finished, type `docker images` then press ENTER. Ensure the docker image tagged `ml:9` has been created.
-3. In a Terminal shell or Windows Command Prompt, change to the `mlgradle-docker/example` directory.
-4. Type `gradle ":mlgradle-docker:deployWithDocker"` then press ENTER.
-5. After the build completes, open a browser. Chrome or Firefox is recommended.
-6. In the browser, navigate to `http://localhost:8001`. On the right-hand side, note the MarkLogic application server named `starwars-gradle` on port 8090. Also, note a MarkLogic content database has been created named `starwars-content` and a MarkLogic module database has been created named `starwars-modules`. MarkLogic forests for these databases have also been created.
-7. In the browser, navigate to `http://localhost:8090`. 
-8. Log into the demonstration application with your MarkLogic administrator username and password.
-9. Note the application displays data in the charts from the content that was also loaded in the `:mlgradle-docker:deployWithDocker` Gradle task.
+To run the demonstration, see the `README.md` file in the `mlgradle-docker/example` folder.
 
 ## Next steps
+
 Examine the build.gradle file in the `mlgradle-docker/example` directory. In the `deployWithDocker` Gradle task, note the dependancies on other tasks. The ordering of these tasks utilizes Gradle's `.mustRunAfter` property for these tasks. 
 
 The Docker-related tasks can be run separately. Be sure to include the `mlgradle-docker` directory in your `settings.gradle` file. See the included `settings.gradle` file as an example.
+
+To learn more about MarkLogic's `ml-gradle` plugin:
+
+* Visit the GitHub project at <https://github.com/marklogic-community/ml-gradle>.
+* See the `ml-gradle` Wiki at <https://github.com/marklogic-community/ml-gradle/wiki>.
+* Learn more about extending `ml-gradle` at <https://github.com/marklogic-community/ml-gradle/wiki/Writing-your-own-task> and <https://github.com/marklogic-community/ml-gradle/wiki/Writing-your-own-command>.
+* Learn about `ml-gradle` with MarkLogic's On Demand video series at <http://mlu.marklogic.com/ondemand>. Select the **ml-gradle** topic under **Series**. 
 
 I hope you find these Docker Gradle tasks useful.
