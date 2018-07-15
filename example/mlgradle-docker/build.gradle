@@ -75,15 +75,18 @@ def isContainer(containerName) {
                                        the admin port (default=8001).
 */
 task createDockerContainer (type: com.marklogic.gradle.task.MarkLogicTask) {
-  doLast {
-    outputs.upToDateWhen {
-      if (project.hasProperty("dockerContainerName")) {
-        return isContainer("dockerContainerName")
-      } else {
-       return false
-      }
+  // permit Gradle incremental build for this task. If the
+  //  desired Docker container exists, don't attempt to
+  //  create it. Just report this task as up-to-date.
+  outputs.upToDateWhen {
+    if (project.hasProperty("dockerContainerName")) {
+      return isContainer("dockerContainerName")
+    } else {
+     return false
     }
+  }
 
+  doLast {
     def dockerArgs = "docker run -d"
 
     // get the host MarkLogic port range that will be exposed
@@ -269,6 +272,17 @@ task stopDockerContainer (type: com.marklogic.gradle.task.MarkLogicTask) {
                 (default: "DockerFile" in the current working directory)
 */
 task createDockerImage (type: com.marklogic.gradle.task.MarkLogicTask) {
+  // permit Gradle incremental build for this task. If the
+  //  desired Docker image exists, don't attempt to
+  //  create it. Just report this task as up-to-date.
+  outputs.upToDateWhen {
+    if (project.hasProperty("dockerImageName")) {
+      return isImage(dockerImageName)
+    } else {
+     return false
+    }
+  }
+
   doLast {
     // check to see if the image is already created
     def dockerFile = ""
