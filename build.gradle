@@ -35,6 +35,29 @@ def isImage(imageName) {
   }
 }
 
+// docker helper function to determine if an image
+//  exists.
+def isContainer(containerName) {
+  def dockerArgs = ""
+
+  // verify we have a docker image name
+  if (containerName) {
+    dockerArgs += "docker container inspect ${containerName}"
+    Process process = dockerArgs.execute()
+    process.waitFor()
+    if (process.exitValue() == 0) {
+      return true
+    } else {
+      println "Std Err: ${process.err.text}"
+      println "Std Out: ${process.in.text}"
+      return false
+    }
+  } else {
+    println "isContainer: containerName parameter is empty."
+    return false
+  }
+}
+
 /*
   createDockerContainer - Create a Docker container from a previously
                           created Docker image.
@@ -53,6 +76,16 @@ def isImage(imageName) {
 */
 task createDockerContainer (type: com.marklogic.gradle.task.MarkLogicTask) {
   doLast {
+    // permit Gradle incremental build for this task. If the
+    //  desired Docker container exists, don't attempt to
+    //  create it. Just report this task as up-to-date.
+    outputs.upToDateWhen {
+      if (project.hasProperty("dockerContainerName")) {
+        return isContainer("dockerContainerName")
+      } else {
+       return false
+      }
+    }
 
     def dockerArgs = "docker run -d"
 
